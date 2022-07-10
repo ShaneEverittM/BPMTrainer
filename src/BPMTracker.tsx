@@ -1,25 +1,26 @@
-import React, {useState, FunctionComponent} from 'react';
+import React, {FunctionComponent} from 'react';
 
-import {useInterval, useEventListener} from "usehooks-ts";
+import {useCounter, useEventListener, useInterval} from 'usehooks-ts';
 
 export interface Props {
     keyOne: string
     keyTwo: string
+    bpm: number
 }
 
-const BPMTracker: FunctionComponent<Props> = ({keyOne, keyTwo}: Props) => {
-    const [counter, setCounter] = useState(0)
-    const [presses, setPresses] = useState(0)
 
-    useInterval(() => {
-        setCounter(counter => counter + 1)
-    }, 1000)
+const BPMTracker: FunctionComponent<Props> = ({keyOne, keyTwo, bpm}: Props) => {
+    const {count: presses, increment: incrementPresses} = useCounter()
+    const {count: expectedPresses, increment: incrementCount} = useCounter()
+
+    const delay_ms = (60 * 1000) / bpm
+    useInterval(incrementCount, delay_ms)
 
     const handleKeyDown = (e: KeyboardEvent) => {
         e.preventDefault()
 
         if (e.key === keyOne || e.key === keyTwo) {
-            setPresses(prevPresses => prevPresses + 1)
+            incrementPresses()
         }
     }
 
@@ -32,7 +33,8 @@ const BPMTracker: FunctionComponent<Props> = ({keyOne, keyTwo}: Props) => {
                 justifyContent: "center",
                 alignContent: "center",
                 height: "100%"
-            }}>Expected Presses: {counter}</div>
+            }}>Expected Presses: {expectedPresses}</div>
+
             <div style={{
                 display: "flex",
                 justifyContent: "center",
