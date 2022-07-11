@@ -2,6 +2,10 @@ import React, {FunctionComponent, useState} from 'react';
 
 import {useEventListener} from 'usehooks-ts';
 
+// TODO:
+//     Implement visualizer
+//     Add knobs for parameters
+
 export interface Props {
     keyOne: string
     keyTwo: string
@@ -37,7 +41,7 @@ const BPMTracker: FunctionComponent<Props> = ({keyOne, keyTwo, bpmTarget, sample
     const handleKeyDown = (e: KeyboardEvent) => {
         e.preventDefault()
 
-        if (e.key === keyOne || e.key === keyTwo) {
+        if ((e.key === keyOne || e.key === keyTwo) && !e.repeat) {
             registerTap()
         }
     }
