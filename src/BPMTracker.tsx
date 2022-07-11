@@ -1,4 +1,4 @@
-import React, {FunctionComponent, useState} from 'react';
+import React, {FunctionComponent, useEffect, useState} from 'react';
 
 import {useEventListener} from 'usehooks-ts';
 
@@ -11,6 +11,7 @@ export interface Props {
     keyTwo: string
     bpmTarget: number
     sampleSize: number
+    bufferSize: number
 }
 
 const MS_PER_MIN: number = 60000
@@ -22,19 +23,42 @@ function computeBPM(samples: number[]): number {
         .reduce((a, b) => a + b) / (samples.length - 1));
 }
 
-const BPMTracker: FunctionComponent<Props> = ({keyOne, keyTwo, bpmTarget, sampleSize}: Props) => {
+function validateProps(props: Props): Props {
+    if (props.bufferSize < props.sampleSize)
+        throw new TypeError("Buffer size must be greater or equal to sample size.")
+
+    return props
+}
+
+const BPMTracker: FunctionComponent<Props> = (props: Props) => {
+    const {
+        keyOne,
+        keyTwo,
+        bpmTarget,
+        sampleSize,
+        bufferSize
+    } = validateProps(props)
+
     const [samples, setSamples] = useState<number[]>([])
     const [bpm, setBPM] = useState<string | undefined>(undefined)
 
-    const registerTap = () => {
-        if (samples.length === sampleSize) {
-            setBPM((computeBPM(samples) / 4).toFixed(1))
+    useEffect(() => {
+        if (samples.length >= sampleSize) {
+            let window = samples.slice(-sampleSize);
+            let newBPM = (computeBPM(window) / 4).toFixed(1);
+            setBPM(newBPM)
+        }
+    }, [samples, sampleSize])
 
-            // Roll window
-            setSamples(([_, ...rest]) => [...rest, Date.now()])
+    const registerTap = () => {
+        if (samples.length === bufferSize * 2) {
+            setSamples(samples => {
+                return [...samples.slice(-(bufferSize - 1)), Date.now()]
+            })
         } else {
-            // Append to samples
-            setSamples(samples => [...samples, Date.now()])
+            setSamples(samples => {
+                return [...samples, Date.now()]
+            })
         }
     }
 
