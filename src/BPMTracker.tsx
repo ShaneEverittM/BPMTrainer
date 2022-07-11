@@ -1,6 +1,7 @@
 import React, {FunctionComponent, useEffect, useState} from 'react';
 
 import {useEventListener} from 'usehooks-ts';
+import {computeMapBPM, Note} from "./bpm";
 
 // TODO:
 //     Implement visualizer
@@ -14,14 +15,6 @@ export interface Props {
     bufferSize: number
 }
 
-const MS_PER_MIN: number = 60000
-
-function computeBPM(samples: number[]): number {
-    return (samples.length === 0) ? NaN : MS_PER_MIN / (samples
-        .map((v, i, a) => v - (a[i - 1] || 0))
-        .slice(1)
-        .reduce((a, b) => a + b) / (samples.length - 1));
-}
 
 function validateProps(props: Props): Props {
     if (props.bufferSize < props.sampleSize)
@@ -45,21 +38,14 @@ const BPMTracker: FunctionComponent<Props> = (props: Props) => {
     useEffect(() => {
         if (samples.length >= sampleSize) {
             let window = samples.slice(-sampleSize);
-            let newBPM = (computeBPM(window) / 4).toFixed(1);
+            let newBPM = (computeMapBPM(window, Note.Sixteenth)).toFixed(10);
             setBPM(newBPM)
         }
     }, [samples, sampleSize])
 
     const registerTap = () => {
-        if (samples.length === bufferSize * 2) {
-            setSamples(samples => {
-                return [...samples.slice(-(bufferSize - 1)), Date.now()]
-            })
-        } else {
-            setSamples(samples => {
-                return [...samples, Date.now()]
-            })
-        }
+        const range = samples.length === bufferSize * 2 ? 0 : -(bufferSize - 1)
+        setSamples(samples => [...samples.slice(range), Date.now()])
     }
 
     const handleKeyDown = (e: KeyboardEvent) => {
