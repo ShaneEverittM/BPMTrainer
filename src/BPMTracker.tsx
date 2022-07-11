@@ -1,30 +1,53 @@
-import React, {FunctionComponent} from 'react';
+import React, {FunctionComponent, useState} from 'react';
 
-import {useCounter, useEventListener, useInterval} from 'usehooks-ts';
+import {useEventListener} from 'usehooks-ts';
 
 export interface Props {
     keyOne: string
     keyTwo: string
-    bpm: number
+    bpmTarget: number
+    sampleSize: number
 }
 
+const MS_PER_MIN: number = 60000
 
-const BPMTracker: FunctionComponent<Props> = ({keyOne, keyTwo, bpm}: Props) => {
-    const {count: presses, increment: incrementPresses} = useCounter()
-    const {count: expectedPresses, increment: incrementCount} = useCounter()
+function computeBPM(samples: number[]): number {
+    return (samples.length === 0) ? NaN : MS_PER_MIN / (samples
+        .map((v, i, a) => v - (a[i - 1] || 0))
+        .slice(1)
+        .reduce((a, b) => a + b) / (samples.length - 1));
+}
 
-    const delay_ms = (60 * 1000) / bpm
-    useInterval(incrementCount, delay_ms)
+const BPMTracker: FunctionComponent<Props> = ({keyOne, keyTwo, bpmTarget, sampleSize}: Props) => {
+    const [samples, setSamples] = useState<number[]>([])
+    const [bpm, setBPM] = useState<string | undefined>(undefined)
+
+    const registerTap = () => {
+        if (samples.length === sampleSize) {
+            setBPM((computeBPM(samples) / 4).toFixed(1))
+
+            // Roll window
+            setSamples(([_, ...rest]) => [...rest, Date.now()])
+        } else {
+            // Append to samples
+            setSamples(samples => [...samples, Date.now()])
+        }
+    }
 
     const handleKeyDown = (e: KeyboardEvent) => {
         e.preventDefault()
 
         if (e.key === keyOne || e.key === keyTwo) {
-            incrementPresses()
+            registerTap()
         }
     }
 
     useEventListener('keydown', handleKeyDown)
+
+    const reset = () => {
+        setBPM(undefined)
+        setSamples([])
+    }
 
     return (
         <>
@@ -33,14 +56,22 @@ const BPMTracker: FunctionComponent<Props> = ({keyOne, keyTwo, bpm}: Props) => {
                 justifyContent: "center",
                 alignContent: "center",
                 height: "100%"
-            }}>Expected Presses: {expectedPresses}</div>
+            }}>BPM: {bpmTarget}</div>
 
             <div style={{
                 display: "flex",
                 justifyContent: "center",
                 alignContent: "center",
                 height: "100%"
-            }}>Your Presses: {presses}</div>
+            }}>Your BPM: {bpm ?? "Calculating"}</div>
+
+            <button style={{
+                display: "flex",
+                justifyContent: "center",
+                alignContent: "center",
+                height: "100%"
+            }} onClick={reset}>Reset
+            </button>
         </>
     );
 }
